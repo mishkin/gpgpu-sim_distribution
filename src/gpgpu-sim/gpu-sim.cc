@@ -299,6 +299,22 @@ void shader_core_config::reg_options(class OptionParser * opp)
     option_parser_register(opp, "-gpgpu_reg_bank_use_warp_id", OPT_BOOL, &gpgpu_reg_bank_use_warp_id,
              "Use warp ID in mapping registers to banks (default = off)",
              "0");
+
+    option_parser_register(opp, "-gpgpu_war_release_mode", OPT_UINT32, &gpgpu_war_release_mode,
+                           "Register read tracking Release Mode "
+                           "no read tracking(0), writeback release(1), dispatch release(2)",
+                           "0");
+
+    option_parser_register(opp, "-gpgpu_war_bloom_size", OPT_UINT32, &gpgpu_war_bloom_size,
+                           "Register read tracking Bloom filter size "
+                           "register identifier level tracking(0), warp level tracking(1), else size of bloom filter is specified",
+                           "1");
+
+    option_parser_register(opp, "-gpgpu_war_counter_max", OPT_UINT32, &gpgpu_war_counter_max,
+                           "Register read tracking counter maximum "
+                           "unbounded(0), else maximum is specified",
+                           "1");
+
     option_parser_register(opp, "-gpgpu_operand_collector_num_units_sp", OPT_INT32, &gpgpu_operand_collector_num_units_sp,
                 "number of collector units (default = 4)", 
                 "4");

@@ -32,8 +32,8 @@
 
 
 //Constructor
-Scoreboard::Scoreboard( unsigned sid, unsigned n_warps )
-: longopregs()
+Scoreboard::Scoreboard( unsigned sid, unsigned n_warps, warmode release_mode, unsigned bloom_size, unsigned counter_max )
+  : longopregs(), m_Read_tracker(n_warps,release_mode,bloom_size,counter_max)
 {
 	m_sid = sid;
 	//Initialize size of table
@@ -92,6 +92,8 @@ void Scoreboard::reserveRegisters(const class warp_inst_t* inst)
         }
     }
 
+    m_Read_tracker.Read_reserve(inst);
+
     //Keep track of long operations
     if (inst->is_load() &&
     		(	inst->space.get_type() == global_space ||
@@ -125,6 +127,7 @@ void Scoreboard::releaseRegisters(const class warp_inst_t *inst)
             longopregs[inst->warp_id()].erase(inst->out[r]);
         }
     }
+    Read_release(inst,release_on_commit);
 }
 
 /** 
@@ -137,11 +140,20 @@ bool Scoreboard::checkCollision( unsigned wid, const class inst_t *inst ) const
 {
 	// Get list of all input and output registers
 	std::set<int> inst_regs;
+	std::set<int>::const_iterator it2;
 
 	if(inst->out[0] > 0) inst_regs.insert(inst->out[0]);
 	if(inst->out[1] > 0) inst_regs.insert(inst->out[1]);
 	if(inst->out[2] > 0) inst_regs.insert(inst->out[2]);
 	if(inst->out[3] > 0) inst_regs.insert(inst->out[3]);
+
+	// Check for collision, get the intersection of reserved registers and instruction registers
+	for ( it2=inst_regs.begin() ; it2 != inst_regs.end(); it2++ )
+	  if(reg_table[wid].find(*it2) != reg_table[wid].end() || m_Read_tracker.checkWriteCollision(wid,*it2)) {
+	    return true;
+	  }
+	inst_regs.clear();
+	
 	if(inst->in[0] > 0) inst_regs.insert(inst->in[0]);
 	if(inst->in[1] > 0) inst_regs.insert(inst->in[1]);
 	if(inst->in[2] > 0) inst_regs.insert(inst->in[2]);
@@ -150,12 +162,11 @@ bool Scoreboard::checkCollision( unsigned wid, const class inst_t *inst ) const
 	if(inst->ar1 > 0) inst_regs.insert(inst->ar1);
 	if(inst->ar2 > 0) inst_regs.insert(inst->ar2);
 
-	// Check for collision, get the intersection of reserved registers and instruction registers
-	std::set<int>::const_iterator it2;
 	for ( it2=inst_regs.begin() ; it2 != inst_regs.end(); it2++ )
-		if(reg_table[wid].find(*it2) != reg_table[wid].end()) {
-			return true;
-		}
+	  if(reg_table[wid].find(*it2) != reg_table[wid].end() || m_Read_tracker.checkReadCollision(wid,*it2)) {
+	    return true;
+	  }
+
 	return false;
 }
 

@@ -120,7 +120,7 @@ shader_core_ctx::shader_core_ctx( class gpgpu_sim *gpu,
     m_L1I = new read_only_cache( name,m_config->m_L1I_config,m_sid,get_shader_instruction_cache_id(),m_icnt,IN_L1I_MISS_QUEUE);
     
     m_warp.resize(m_config->max_warps_per_shader, shd_warp_t(this, warp_size));
-    m_scoreboard = new Scoreboard(m_sid, m_config->max_warps_per_shader);
+    m_scoreboard = new Scoreboard(m_sid, m_config->max_warps_per_shader, m_config->gpgpu_war_release_mode, m_config->gpgpu_war_bloom_size, m_config->gpgpu_war_counter_max);
     
     //scedulers
     //must currently occur after all inputs have been initialized.
@@ -1702,7 +1702,8 @@ void ldst_unit::writeback()
                 }
             }
             if( insn_completed ) {
-                m_core->warp_inst_complete(m_next_wb);
+	      m_scoreboard->Read_release(&m_next_wb, release_on_commit);
+	      m_core->warp_inst_complete(m_next_wb);
             }
             m_next_wb.clear();
             m_last_inst_gpu_sim_cycle = gpu_sim_cycle;
@@ -1910,6 +1911,7 @@ void ldst_unit::cycle()
            }
        } else {
            // stores exit pipeline here
+	   m_scoreboard->Read_release(m_dispatch_reg,release_on_commit);
            m_core->dec_inst_in_pipeline(warp_id);
            m_core->warp_inst_complete(*m_dispatch_reg);
            m_dispatch_reg->clear();
@@ -3023,6 +3025,8 @@ void opndcoll_rfu_t::dispatch_ready_cu()
     		 m_shader->incnon_rf_operands(m_shader->get_config()->warp_size);//cu->get_active_count());
    	      }
     	}
+	 shader_core()->Read_release(cu->get_warp(), release_on_dispatch);
+
          cu->dispatch();
       }
    }

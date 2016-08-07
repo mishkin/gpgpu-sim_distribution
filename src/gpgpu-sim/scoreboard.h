@@ -35,10 +35,11 @@
 #define SCOREBOARD_H_
 
 #include "../abstract_hardware_model.h"
+#include "read_tracking.h"
 
 class Scoreboard {
 public:
-    Scoreboard( unsigned sid, unsigned n_warps );
+    Scoreboard( unsigned sid, unsigned n_warps, warmode release_mode, unsigned bloom_size, unsigned counter_max);
 
     void reserveRegisters(const warp_inst_t *inst);
     void releaseRegisters(const warp_inst_t *inst);
@@ -48,6 +49,9 @@ public:
     bool pendingWrites(unsigned wid) const;
     void printContents() const;
     const bool islongop(unsigned warp_id, unsigned regnum);
+
+    void Read_release(const warp_inst_t *inst, warmode mode) { m_Read_tracker.Read_release(inst,mode); }
+
 private:
     void reserveRegister(unsigned wid, unsigned regnum);
     int get_sid() const { return m_sid; }
@@ -59,6 +63,7 @@ private:
     std::vector< std::set<unsigned> > reg_table;
     //Register that depend on a long operation (global, local or tex memory)
     std::vector< std::set<unsigned> > longopregs;
+    Read_tracking m_Read_tracker;
 };
 
 

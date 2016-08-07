@@ -794,6 +794,8 @@ private:
       const op_t *get_operands() const { return m_src_op; }
       void dump(FILE *fp, const shader_core_ctx *shader ) const;
 
+      const class warp_inst_t* get_warp() const {return m_warp;} //Used by release warps 
+
       unsigned get_warp_id() const { return m_warp_id; }
       unsigned get_active_count() const { return m_warp->active_count(); }
       const active_mask_t & get_active_mask() const { return m_warp->get_active_mask(); }
@@ -1288,6 +1290,11 @@ struct shader_core_config : public core_config
     int gpgpu_num_sched_per_core;
     int gpgpu_max_insn_issue_per_warp;
 
+    //WAR Support
+    warmode gpgpu_war_release_mode;
+    unsigned int gpgpu_war_bloom_size;
+    unsigned int gpgpu_war_counter_max;
+
     //op collector
     int gpgpu_operand_collector_num_units_sp;
     int gpgpu_operand_collector_num_units_sfu;
@@ -1736,6 +1743,7 @@ public:
 	 void inc_simt_to_mem(unsigned n_flits){ m_stats->n_simt_to_mem[m_sid] += n_flits; }
 	 bool check_if_non_released_reduction_barrier(warp_inst_t &inst);
 
+	 void Read_release( const class warp_inst_t *inst, warmode mode ) { m_scoreboard->Read_release(inst, mode); }
 	private:
 	 unsigned inactive_lanes_accesses_sfu(unsigned active_count,double latency){
       return  ( ((32-active_count)>>1)*latency) + ( ((32-active_count)>>3)*latency) + ( ((32-active_count)>>3)*latency);
